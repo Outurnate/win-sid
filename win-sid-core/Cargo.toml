@@ -2,7 +2,7 @@
 name = "win-sid-core"
 version = "0.1.0"
 edition = "2021"
-authors = ["Joe Dillon", "Joe Dillon <joseph@outurnate.com>"]
+authors = ["Joe Dillon <joseph@outurnate.com>"]
 description = "Windows security identifier primitive"
 documentation = "https://docs.rs/win-sid-core"
 readme = "README.md"
