@@ -1,20 +1,22 @@
 [package]
-name = "win-sid"
+name = "win-sid-macros"
 version = "0.1.0"
 edition = "2021"
 authors = ["Joe Dillon", "Joe Dillon <joseph@outurnate.com>"]
 description = "Windows security identifier primitive"
-documentation = "https://docs.rs/win-sid"
+documentation = "https://docs.rs/win-sid-macros"
 readme = "README.md"
 homepage = "https://github.com/outurnate/win-sid/"
 repository = "https://github.com/outurnate/win-sid/"
 license = "MIT OR Apache-2.0"
 keywords = ["serialization", "parsing", "utility", "windows", "library"]
-rust-version = "1.80.0"
 
-[workspace]
-members = ["win-sid-core", "win-sid-macros"]
+[lib]
+proc-macro = true
 
 [dependencies]
-win-sid-core = { path = "win-sid-core" }
-win-sid-macros = { path = "win-sid-macros" }
+quote = "1.0.37"
+syn = "2.0.87"
+proc-macro2 = "1.0.92"
+proc-macro2-diagnostics = "0.10.1"
+win-sid-core = { path = "../win-sid-core" }
