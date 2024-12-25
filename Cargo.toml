@@ -16,5 +16,5 @@ rust-version = "1.80.0"
 members = ["win-sid-core", "win-sid-macros"]
 
 [dependencies]
-win-sid-core = { path = "win-sid-core" }
-win-sid-macros = { path = "win-sid-macros" }
+win-sid-core = { version = "~0.1", path = "win-sid-core" }
+win-sid-macros = { version = "~0.1", path = "win-sid-macros" }
