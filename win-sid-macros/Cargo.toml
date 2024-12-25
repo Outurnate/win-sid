@@ -19,4 +19,4 @@ quote = "~1.0"
 syn = "~2.0"
 proc-macro2 = "~1.0"
 proc-macro2-diagnostics = "~0.10"
-win-sid-core = { path = "../win-sid-core" }
+win-sid-core = { version = "~0.1", path = "../win-sid-core" }
