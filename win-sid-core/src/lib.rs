@@ -2,6 +2,7 @@
 
 #[cfg(test)]
 mod tests;
+mod maybe_heap;
 
 use byteorder::{BigEndian, ByteOrder};
 use nom::{
@@ -16,10 +17,11 @@ use nom::{
 #[cfg(feature = "serde")]
 use serde::{de::Error, Deserialize, Deserializer, Serialize, Serializer};
 use std::{
-    fmt::{Debug, Display, Write},
-    str::FromStr,
+    fmt::{Debug, Display, Write}, hash::Hash, str::FromStr
 };
 use thiserror::Error;
+use const_for::const_for;
+use maybe_heap::MaybeHeap;
 
 fn use_parse_str<T>(parser_result: IResult<&str, T>) -> Result<T, SecurityIdentifierError> {
     let (remainder, value) = parser_result.finish()?;
@@ -79,11 +81,13 @@ impl FromStr for IdentifierAuthority {
     }
 }
 
+const COMMON_SIZE: usize = 6;
+
 /// Core type representing Windows security identifiers ("SID"s).  Type represents version one SIDs, which consist of a single 48 bit identifier authority, followed by up to 256 sub-authorities.
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Clone, Hash)]
 pub struct SecurityIdentifier {
     identifier_authority: IdentifierAuthority,
-    sub_authority: Vec<u32>,
+    sub_authority: MaybeHeap<COMMON_SIZE>,
 }
 
 impl SecurityIdentifier {
@@ -96,7 +100,28 @@ impl SecurityIdentifier {
         }
         Self {
             identifier_authority: identifier_authority.into(),
-            sub_authority: sub_authority.to_vec(),
+            sub_authority: sub_authority.to_vec().into(),
+        }
+    }
+
+    pub const fn new_const<const N: usize>(identifier_authority: u64, sub_authority: [u32; N]) -> Self {
+        let mut stack_sub_authorities = [0u32; COMMON_SIZE];
+        assert!(N <= COMMON_SIZE);
+        const_for!(i in 0..COMMON_SIZE => {
+            if N > i {
+                stack_sub_authorities[i] = sub_authority[i];
+            }
+        });
+        Self {
+            identifier_authority: IdentifierAuthority([
+                (identifier_authority >> 40) as u8,
+                (identifier_authority >> 32) as u8,
+                (identifier_authority >> 24) as u8,
+                (identifier_authority >> 16) as u8,
+                (identifier_authority >> 8) as u8,
+                identifier_authority as u8
+            ]),
+            sub_authority: MaybeHeap::Stack(stack_sub_authorities, N),
         }
     }
 
@@ -111,14 +136,14 @@ impl SecurityIdentifier {
     }
 
     /// Writes a SID in binary format and returns a Vec containing the binary representation.
-    pub fn into_bytes(self) -> Vec<u8> {
-        let mut result = Vec::with_capacity(8 + (self.sub_authority.len() * 4));
+    pub fn to_bytes(&self) -> Vec<u8> {
+        let mut result = Vec::with_capacity(8 + (self.sub_authority.as_slice().len() * 4));
         result.push(1);
-        result.push(self.sub_authority.len() as u8);
+        result.push(self.sub_authority.as_slice().len() as u8);
         for byte in self.identifier_authority.0 {
             result.push(byte)
         }
-        for sub_authority in self.sub_authority {
+        for sub_authority in self.sub_authority.as_slice() {
             for byte in sub_authority.to_le_bytes() {
                 result.push(byte);
             }
@@ -127,8 +152,8 @@ impl SecurityIdentifier {
     }
 
     /// Constructs an LDAP predicate that represents the objectSID attribute being equal to this SID.
-    pub fn to_ldap_predicate(self) -> String {
-        let bytes = self.into_bytes();
+    pub fn to_ldap_predicate(&self) -> String {
+        let bytes = self.to_bytes();
         // 12 for predicate fixed text, 3 for each byte encoded as hex and prefixed with \
         let mut predicate = String::with_capacity(12 + (bytes.len() * 3));
         let _ = write!(predicate, "(objectSID=");
@@ -141,7 +166,7 @@ impl SecurityIdentifier {
 
     /// Retrieves the last sub-authority, if there are any.  This is commonly referred to as the "resource identifier" or RID.
     pub fn get_resource_identifier(&self) -> Option<&u32> {
-        self.sub_authority.last()
+        self.sub_authority.as_slice().last()
     }
 
     /// Retrieves the mandatory identifier authority
@@ -164,7 +189,7 @@ impl SecurityIdentifier {
             input,
             Self {
                 identifier_authority,
-                sub_authority,
+                sub_authority : sub_authority.into(),
             },
         ))
     }
@@ -173,7 +198,7 @@ impl SecurityIdentifier {
 impl Display for SecurityIdentifier {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.write_fmt(format_args!("S-1-{}", self.identifier_authority))?;
-        for sub_authority in &self.sub_authority {
+        for sub_authority in self.sub_authority.as_slice() {
             f.write_fmt(format_args!("-{}", sub_authority))?;
         }
         Ok(())
@@ -243,7 +268,7 @@ fn parse_sid_bytes(input: &[u8]) -> IResult<&[u8], SecurityIdentifier> {
         input,
         SecurityIdentifier {
             identifier_authority: IdentifierAuthority(identifier_authority.try_into().unwrap()),
-            sub_authority,
+            sub_authority: sub_authority.into(),
         },
     ))
 }

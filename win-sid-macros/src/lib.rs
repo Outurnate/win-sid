@@ -26,6 +26,6 @@ fn sid_inner(constant_value: LitStr) -> Result<TokenStream, Diagnostic> {
     let identifier_authorities: u64 = sid.get_identifier_authority().to_owned().into();
     let sub_authorities = sid.get_identifier_sub_authority();
     Ok(quote!(
-        win_sid::SecurityIdentifier::new((#identifier_authorities as u32), &[#( #sub_authorities ),*])
+        win_sid::SecurityIdentifier::new_const((#identifier_authorities as u64), [#( #sub_authorities ),*])
     ))
 }
