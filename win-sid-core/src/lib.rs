@@ -32,8 +32,12 @@ fn use_parse_str<T>(parser_result: IResult<&str, T>) -> Result<T, SecurityIdenti
     }
 }
 
-/// A type representing the first value after the SID version.  The value is a single 48 bit integer.  Almost all SIDs encoutered "in the wild" will be less than u32.
+/// A type representing the first value after the SID version.
+/// 
+/// The value is a single 48 bit integer.  Almost all SIDs encoutered "in the wild" will be less than u32.
+/// 
 /// # Panics
+/// 
 /// Converting to u64 is infallible, however, converting to u32 may panic if the value exceeds 2^32.
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Clone, Hash)]
 pub struct IdentifierAuthority([u8; 6]);
@@ -91,8 +95,12 @@ pub struct SecurityIdentifier {
 }
 
 impl SecurityIdentifier {
-    /// Constructs a new SID manually.  Version number is hard-coded to one, as no other version presently exists.  See the sid macro for a friendlier adapter to this function.
+    /// Constructs a new SID manually.
+    /// 
+    /// Version number is hard-coded to one, as no other version presently exists.
+    /// 
     /// # Panics
+    /// 
     /// Will panic if an attempt is made to construct a SID with more than 256 sub-authorities.
     pub fn new(identifier_authority: impl Into<IdentifierAuthority>, sub_authority: &[u32]) -> Self {
         if sub_authority.len() > 256 {
@@ -104,6 +112,13 @@ impl SecurityIdentifier {
         }
     }
 
+    /// Constructs a new SID manually (const version)
+    /// 
+    /// Version number is hard-coded to one, as no other version presently exists.  See the sid macro for a friendlier adapter to this function.
+    /// 
+    /// # Panics
+    /// 
+    /// Will panic if an attempt is made to construct a SID with more than 6 sub-authorities.
     pub const fn new_const<const N: usize>(identifier_authority: u64, sub_authority: [u32; N]) -> Self {
         let mut stack_sub_authorities = [0u32; COMMON_SIZE];
         assert!(N <= COMMON_SIZE);
@@ -125,7 +140,9 @@ impl SecurityIdentifier {
         }
     }
 
-    /// Reads a SID from a slice of bytes.  SID must be in binary format - for text SIDs, first parse into a string.
+    /// Reads a SID from a slice of bytes.
+    /// 
+    /// SID must be in binary format - for text SIDs, first parse into a string.
     pub fn from_bytes(input: &[u8]) -> Result<Self, SecurityIdentifierError> {
         let (remainder, sid) = parse_sid_bytes(input).finish()?;
         if !remainder.is_empty() {

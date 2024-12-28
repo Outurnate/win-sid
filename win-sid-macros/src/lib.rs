@@ -11,7 +11,9 @@ use win_sid_core::SecurityIdentifier;
 
 extern crate proc_macro;
 
-/// The sid macro will parse/validate a SID at compile time.  SIDs require heap allocation, and thus, cannot be created in const contexts.  The recommended approach for static SIDs is to wrap the call in a `std::sync::LazyLock`.
+/// The sid macro will parse/validate a SID at compile time.
+/// 
+/// Only supports SIDs that are const constructable - that is, SIDs with six or less sub-authorities
 #[proc_macro]
 pub fn sid(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
     let constant_value = parse_macro_input!(input as LitStr);
